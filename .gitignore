@@ -36,3 +36,6 @@
 
 # AoC input files
 input.txt
+
+# CMAKE cache
+bin/
