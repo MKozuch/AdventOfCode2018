@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Visual Studio cache/options dir
+.vs/
+
+# AoC input files
+input.txt
