@@ -7,32 +7,75 @@
 #include <algorithm>
 #include <valarray>
 #include <numeric>
+#include <list>
+#include <map>
 
 #define INIT_FABRIC_SIZE 2
 
 void printFabric(const std::valarray<std::valarray<unsigned int>> &fabricGrid) {
-	if (fabricGrid.size() < 100 && fabricGrid[0].size() < 100) {
-		for (const auto &row : fabricGrid) {
-			for (const auto cell : row) {
-				if (cell)
-					printf("%d", cell);
-				else
-					printf("-");
-			}
-			printf("\n");
-		}
-	}
+   if (fabricGrid.size() < 100 && fabricGrid[0].size() < 100) {
+      for (const auto &row : fabricGrid) {
+         for (const auto cell : row) {
+            if (cell)
+               printf("%d", cell);
+            else
+               printf("-");
+         }
+         printf("\n");
+      }
+   }
 }
+
+struct Claim
+{
+   unsigned int claimNo;
+   unsigned int xPos;
+   unsigned int yPos;
+   unsigned int width;
+   unsigned int length;
+};
+
+bool isOverlapping(Claim left, Claim right)
+{
+   bool a =               left.xPos <= right.xPos + right.width;
+   bool b =  left.xPos + left.width > right.xPos;
+   bool c =               left.yPos <= right.yPos + right.length;
+   bool d = left.yPos + left.length > right.yPos;
+
+   return a && b && c && d;
+}
+
+unsigned int nonOverlappingClaim(std::list<Claim> &claimList)
+{
+   std::map<unsigned int, bool> overlappingMap;
+   for (auto claim : claimList)
+      overlappingMap.insert_or_assign(claim.claimNo, false);
+
+   for (auto left = claimList.begin(); left != claimList.end(); left++) {
+      for (auto right = left; right != claimList.end(); right++) {
+         if ((*left).claimNo != (*right).claimNo) {
+            if (isOverlapping(*left, *right)) {
+               overlappingMap[(*left).claimNo] |= true;
+               overlappingMap[(*right).claimNo] |= true;
+            }
+         }
+      }
+   }
+
+   for (auto item : overlappingMap)
+      if (!item.second)
+         return item.first;
+   return 0;
+}
+
 
 int main(int argc, char** argv)
 {
 	std::string fName;
 
-	if (argc < 2)
-		//fName = "F:\\Code\\AdventOfCode2018\\Day_3\\test2.txt";
-	 fName = "F:\\Code\\AdventOfCode2018\\Day_3\\input.txt";
-   //fName = "C:\\Users\\MKozuch\\Desktop\\Day_3\\NoMatterHowYouSliceIt\\test.txt";
-   //fName = "C:\\Users\\MKozuch\\Desktop\\Day_3\\NoMatterHowYouSliceIt\\input.txt";
+   if (argc < 2) {
+      fName = ".\\input.txt";
+   }
 	else
 		fName = argv[1];
 
@@ -44,6 +87,7 @@ int main(int argc, char** argv)
 
 	std::string line;
 	std::valarray<std::valarray<unsigned int>> fabricGrid(std::valarray<unsigned int>((unsigned int)0, INIT_FABRIC_SIZE), INIT_FABRIC_SIZE);
+   std::list<Claim> claimList;
 
 	while (std::getline(stream, line)) {
 
@@ -66,6 +110,7 @@ int main(int argc, char** argv)
 		unsigned int yPos = std::stoi((*resBegin++).str());
 		unsigned int width = std::stoi((*resBegin++).str());
 		unsigned int length = std::stoi((*resBegin++).str());
+      claimList.push_back({ claimNo, xPos, yPos, width, length });
 
 		auto fabricLen = fabricGrid.size();
 		auto fabricWidth = fabricGrid[0].size();
@@ -79,13 +124,13 @@ int main(int argc, char** argv)
 			fabricWidth = fabricGrid[0].size();
 			fabricSize = fabricLen;
 
-			for (int i = 0; i < copy.size(); ++i) {
+			for (unsigned int i = 0; i < copy.size(); ++i) {
 				std::copy(std::begin(copy[i]), std::end(copy[i]), std::begin(fabricGrid[i]));
 			}
-         }
+      }
 
-      for (int row = yPos; row < yPos + length; ++row) {
-         for (int col = xPos; col < xPos + width; ++col) {
+      for (unsigned int row = yPos; row < yPos + length; ++row) {
+         for (unsigned int col = xPos; col < xPos + width; ++col) {
 			 (fabricGrid[row])[col] += 1;
          }
       }
@@ -102,5 +147,10 @@ int main(int argc, char** argv)
       [](const int &sum, const std::valarray<unsigned int> &row) {
       return sum + std::count_if(std::begin(row), std::end(row), [](const unsigned int &val) {return val > 1; });
    });
+
    printf("%d\n", count2);
+   printf("%d\n", nonOverlappingClaim(claimList));
+   
+   std::string n;
+   std::cin >> n;
 }

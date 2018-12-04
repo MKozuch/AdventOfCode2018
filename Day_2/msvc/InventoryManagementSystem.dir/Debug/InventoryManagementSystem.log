@@ -1,3 +1,0 @@
-﻿cl : Command line warning D9002: ignoring unknown option '-std=c++17'
-  InventoryManagementSystem.cpp
-  InventoryManagementSystem.vcxproj -> F:\Code\AdventOfCode2018\Day_2\msvc\Debug\InventoryManagementSystem.exe
