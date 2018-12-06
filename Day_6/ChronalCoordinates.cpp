@@ -12,8 +12,6 @@
 #include <set>
 #include <chrono>
 
-#define INIT_FABRIC_SIZE 2
-
 using Point = std::pair<int, int>;
 
 void expandPlane(std::valarray<std::valarray<unsigned int>> &fabricGrid) {
@@ -27,7 +25,7 @@ void expandPlane(std::valarray<std::valarray<unsigned int>> &fabricGrid) {
    }
 }
 
-void printFabric(const std::valarray<std::valarray<int>> &fabricGrid) {
+void printPlane(const std::valarray<std::valarray<int>> &fabricGrid) {
    if (fabricGrid.size() < 100 ) {
       for (const auto &row : fabricGrid) {
          for (const auto &cell : row) {
@@ -67,6 +65,30 @@ int closestPoint(const Point &refPoint, const std::vector<Point> &pointList) {
       return std::distance(distList.begin(), minDistIt);
    else
       return 0;
+}
+
+std::tuple<int, int> closestPoints(const Point &refPoint, const std::vector<Point> &pointList) {
+   int closestId = 0;
+   int closestDist = INT_MAX;
+
+   std::vector<int> distList;
+
+   for (int i = 0; i < pointList.size(); ++i) {
+      auto dist = manhattanDist(pointList[i], refPoint);
+      distList.push_back(dist);
+   }
+
+   auto minDistIt = std::min_element(distList.begin(), distList.end());
+   if (minDistIt == distList.end())
+      return {};
+   auto minDist = *minDistIt;
+
+   auto distSum = std::accumulate(distList.cbegin(), distList.cend(), 0);
+
+   if (std::count(distList.begin(), distList.end(), minDist) == 1)
+      return { std::distance(distList.begin(), minDistIt), distSum };
+   else
+      return { 0, distSum };
 }
 
 int main(int argc, char** argv)
@@ -122,21 +144,27 @@ int main(int argc, char** argv)
    std::valarray<std::valarray<int>> plane(std::valarray<int>((int)0, planeSize), planeSize);
    
    std::map<int, int> areaCount;
-   std::set<int> rejected;
+   int safeArea = 0;
 
    for (auto i = 0; i < planeSize; ++i) {
       for (auto j = 0; j < planeSize; ++j) {
-         auto pointId = closestPoint({ i,j }, pointList);
+
+         int pointId;
+         int distanceSum;
+         std::tie(pointId, distanceSum) = closestPoints({ i,j }, pointList);
          plane[i][j] = pointId;
 
          if (i == 0 || j == 0 || i == planeSize - 1 || j == planeSize - 1 || areaCount[pointId] == -1)
-            areaCount[pointId] = -1;
+            areaCount[pointId] = -1; // exclude points that lie on the edge of plane
          else
             areaCount[pointId] += 1;
+
+         if (distanceSum < 10000)
+            safeArea += 1;
       }
    }
 
-   printFabric(plane);
+   printPlane(plane);
 
    auto maxAreaIt = std::max_element(areaCount.cbegin(), areaCount.cend(), [](const std::pair<int, int> &left, const std::pair<int, int> &right) {return left.second < right.second; });
    if (maxAreaIt != areaCount.cend() && (*maxAreaIt).second != -1) {
@@ -146,6 +174,8 @@ int main(int argc, char** argv)
    }
    else
       printf("0\n");
+
+   printf("%d\n", safeArea);
 
    auto t2 = std::chrono::high_resolution_clock::now();
    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
