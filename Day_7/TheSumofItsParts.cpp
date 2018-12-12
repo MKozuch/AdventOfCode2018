@@ -13,19 +13,20 @@
 #include <string>
 #include <tuple>
 #include <valarray>
+#include <queue>
 
 using namespace std;
 
 struct Node;
 struct NodeComp;
-//using NodePtr = shared_ptr<Node>;
 using NodePtr = Node * ;
 using NodeValue = char;
 using NodeList = std::vector<NodePtr>;
 
+
 struct NodeComp
 {
-   bool operator()(const NodePtr left, const NodePtr right);
+   bool operator()(const NodePtr left, const NodePtr right) const;
 };
 
 struct Node
@@ -59,8 +60,7 @@ struct Node
    NodePtr findAscendant(char val);
 };
 
-
-bool NodeComp::operator()(const NodePtr left, const NodePtr right)
+bool NodeComp::operator()(const NodePtr left, const NodePtr right) const
 {
    return left->value < right->value;
 }
@@ -70,25 +70,73 @@ NodePtr makeNode(char value, NodePtr parent) {
    return NodePtr(new Node(value, parent));
 }
 
+void BreadthFirstSearch(NodePtr root, const NodeList &graph) {
+   enum class NodeColor { White, Grey, Black };
 
-void traverseGraphDown( NodePtr peak, std::function<void(NodeValue)> fun) {
-   if (!peak)
-      return;
+   struct NodeProp {
+      enum class NodeColor color = NodeColor::White;
+      int dist = 0;
+      NodePtr parent = nullptr;
+   };
 
-   fun(peak->value);
-   for (auto item : peak->parents)
-      traverseGraphDown(item, fun);
+   using PropList = std::map<NodePtr, NodeProp>;
+   PropList propList;
+   
+   using NodeQueue = std::queue<NodePtr>;
+   NodeQueue Q;
+
+
+   for (const auto &node : graph)
+      propList.insert_or_assign(node, NodeProp());
+
+   propList[root].color = NodeColor::Grey;
+   propList[root].dist = 0;
+   Q.push(root);
+
+   printf("%c", root->value);
+
+   while (!Q.empty()) {
+      const NodePtr u = Q.front();
+      Q.pop();
+
+      auto &uProp = propList[u];
+
+      for (const auto child : u->children) {
+         auto &prop = propList[child];
+         if (prop.color == NodeColor::White) {
+            prop.color = NodeColor::Grey;
+            prop.dist = uProp.dist + 1;
+            prop.parent = u;
+            Q.push(child);
+
+            printf("%c", child->value);
+         }
+      }
+
+      uProp.color = NodeColor::Black;
+   }
 }
 
-void traverseGraphUp(NodePtr root, std::function<void(NodeValue)> fun) {
-   if (!root)
-      return;
+void traverseGraph(NodeList &_graph, std::function<void(NodeValue)> fun) {
+   NodeList graph;
+   std::copy(_graph.begin(), _graph.end(), std::back_inserter(graph));
 
-   fun(root->value);
-   for (auto item : root->children)
-      traverseGraphUp(item, fun);
+   std::sort(graph.begin(), graph.end(), [](const NodePtr &a, const NodePtr & b) -> bool {return a->value < b->value; });
+
+   while (!graph.empty()) {
+      for (auto it = graph.begin(); it != graph.end(); ++it) {
+         auto item = *it;
+         if (item->parents.empty()) {
+            fun(item->value);
+            for (auto child : item->children)
+               child->parents.erase(item);
+            graph.erase(it);
+            break;
+         }
+      }
+   }
+
 }
-
 
 NodePtr findNodeInList(const NodeList &nodeList, NodeValue val) {
    for (const auto &node : nodeList) {
@@ -118,11 +166,6 @@ NodePtr findRootInList(const NodeList &nodeList) {
 }
 
 
-int distFromRoot(const NodePtr node, const NodePtr root) {
-   // TODO
-}
-
-
 int main(int argc, char** argv)
 {
    auto t1 = std::chrono::high_resolution_clock::now();
@@ -130,7 +173,8 @@ int main(int argc, char** argv)
    std::string fName;
 
    if (argc < 2) {
-      fName = ".\\..\\test.txt";
+       fName = ".\\..\\input.txt";
+      //fName = ".\\..\\test.txt";
    }
    else
       fName = argv[1];
@@ -184,15 +228,10 @@ int main(int argc, char** argv)
 
    auto peak = findPeakInList(nodeList);
    auto root = findRootInList(nodeList);
-
-   if (peak)
-      traverseGraphUp(root, [](NodeValue val) {cout << val; });
+   traverseGraph(nodeList, [](NodeValue val) {printf("%c", val); });
 
    auto t2 = std::chrono::high_resolution_clock::now();
    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
    printf("\n");
    printf("Took %ld ms", elapsed);
 }
-
-
-// sort nodelist by 1-distance from root 2-alphabetically
